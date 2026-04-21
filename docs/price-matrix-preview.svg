@@ -1,0 +1,52 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" rx="32" fill="#020617"/>
+  <rect x="36" y="36" width="1128" height="648" rx="28" fill="#0F172A" stroke="#1E293B"/>
+  <rect x="72" y="72" width="320" height="576" rx="24" fill="#111827" stroke="#1F2937"/>
+  <rect x="426" y="72" width="702" height="162" rx="24" fill="#111827" stroke="#1F2937"/>
+  <rect x="426" y="262" width="702" height="386" rx="24" fill="#111827" stroke="#1F2937"/>
+
+  <text x="96" y="122" fill="#F8FAFC" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="700">Price Matrix Optimizer</text>
+  <text x="96" y="154" fill="#94A3B8" font-family="Inter, Arial, sans-serif" font-size="20">Client-side pricing analysis for parts-heavy businesses</text>
+
+  <rect x="96" y="192" width="272" height="88" rx="18" fill="#052E2B" stroke="#10B981"/>
+  <text x="120" y="226" fill="#6EE7B7" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="600">Current Profit</text>
+  <text x="120" y="258" fill="#F8FAFC" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">$18,420.50</text>
+
+  <rect x="96" y="302" width="272" height="88" rx="18" fill="#082F49" stroke="#38BDF8"/>
+  <text x="120" y="336" fill="#7DD3FC" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="600">Target Margin</text>
+  <text x="120" y="368" fill="#F8FAFC" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">62.0%</text>
+
+  <rect x="96" y="412" width="272" height="88" rx="18" fill="#1E1B4B" stroke="#818CF8"/>
+  <text x="120" y="446" fill="#C7D2FE" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="600">Top Open Range</text>
+  <text x="120" y="478" fill="#F8FAFC" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">$250.01+</text>
+
+  <rect x="96" y="522" width="272" height="88" rx="18" fill="#111827" stroke="#334155"/>
+  <text x="120" y="556" fill="#94A3B8" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="600">Exports</text>
+  <text x="120" y="588" fill="#F8FAFC" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">CSV • Report • Copy</text>
+
+  <text x="458" y="120" fill="#F8FAFC" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">Workflow snapshot</text>
+  <text x="458" y="154" fill="#94A3B8" font-family="Inter, Arial, sans-serif" font-size="18">Set your matrix, upload shop data, tune a target, then export a client-ready price plan.</text>
+
+  <rect x="458" y="182" width="150" height="28" rx="14" fill="#052E2B"/>
+  <text x="488" y="201" fill="#6EE7B7" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700">MATRIX SETUP</text>
+  <rect x="626" y="182" width="146" height="28" rx="14" fill="#082F49"/>
+  <text x="654" y="201" fill="#7DD3FC" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700">UPLOAD DATA</text>
+  <rect x="790" y="182" width="140" height="28" rx="14" fill="#1E293B"/>
+  <text x="822" y="201" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700">SET TARGET</text>
+  <rect x="948" y="182" width="138" height="28" rx="14" fill="#1E293B"/>
+  <text x="982" y="201" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700">EXPORT</text>
+
+  <rect x="458" y="294" width="120" height="266" rx="16" fill="#0B1220"/>
+  <rect x="604" y="354" width="120" height="206" rx="16" fill="#12304A"/>
+  <rect x="750" y="244" width="120" height="316" rx="16" fill="#14532D"/>
+  <rect x="896" y="406" width="120" height="154" rx="16" fill="#1E293B"/>
+  <rect x="1042" y="324" width="120" height="236" rx="16" fill="#312E81"/>
+
+  <text x="468" y="584" fill="#94A3B8" font-family="Inter, Arial, sans-serif" font-size="14">Tier A</text>
+  <text x="614" y="584" fill="#94A3B8" font-family="Inter, Arial, sans-serif" font-size="14">Tier B</text>
+  <text x="760" y="584" fill="#94A3B8" font-family="Inter, Arial, sans-serif" font-size="14">Tier C</text>
+  <text x="906" y="584" fill="#94A3B8" font-family="Inter, Arial, sans-serif" font-size="14">Tier D</text>
+  <text x="1052" y="584" fill="#94A3B8" font-family="Inter, Arial, sans-serif" font-size="14">Tier E</text>
+
+  <text x="458" y="622" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="18">Built for quick what-if pricing work without sending data to a server.</text>
+</svg>

@@ -24,24 +24,32 @@ export function parseCurrency(str) {
 /**
  * Format a number as a USD currency string.
  *
+ * Non-finite or non-numeric inputs (null, undefined, NaN, Infinity) fall
+ * back to "$0.00" so the UI never renders "$NaN" cells.
+ *
  * @param {number} value - Numeric value to format.
  * @returns {string} Formatted string, e.g. "$1,234.56".
  */
 export function formatCurrency(value) {
+  const safe = Number.isFinite(value) ? value : 0;
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
-  }).format(value);
+  }).format(safe);
 }
 
 /**
  * Format a number as a percentage string with one decimal place.
  *
+ * Non-finite or non-numeric inputs (null, undefined, NaN, Infinity) fall
+ * back to "0.0%" rather than throwing or rendering "NaN%".
+ *
  * @param {number} value - Percentage value (e.g. 12.5 for 12.5%).
  * @returns {string} Formatted string, e.g. "12.5%".
  */
 export function formatPercent(value) {
-  return `${value.toFixed(1)}%`;
+  const safe = Number.isFinite(value) ? value : 0;
+  return `${safe.toFixed(1)}%`;
 }
 
 /**

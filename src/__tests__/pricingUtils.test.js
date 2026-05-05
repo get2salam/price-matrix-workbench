@@ -84,6 +84,14 @@ describe('formatCurrency', () => {
   it('rounds to 2 decimal places', () => {
     expect(formatCurrency(1.999)).toBe('$2.00');
   });
+
+  it('falls back to $0.00 for non-finite or non-numeric input', () => {
+    expect(formatCurrency(NaN)).toBe('$0.00');
+    expect(formatCurrency(Infinity)).toBe('$0.00');
+    expect(formatCurrency(-Infinity)).toBe('$0.00');
+    expect(formatCurrency(null)).toBe('$0.00');
+    expect(formatCurrency(undefined)).toBe('$0.00');
+  });
 });
 
 // ─── formatPercent ───────────────────────────────────────────────────────────
@@ -99,6 +107,13 @@ describe('formatPercent', () => {
 
   it('rounds to 1 decimal place', () => {
     expect(formatPercent(12.456)).toBe('12.5%');
+  });
+
+  it('falls back to 0.0% for non-finite or non-numeric input', () => {
+    expect(formatPercent(NaN)).toBe('0.0%');
+    expect(formatPercent(Infinity)).toBe('0.0%');
+    expect(formatPercent(null)).toBe('0.0%');
+    expect(formatPercent(undefined)).toBe('0.0%');
   });
 });
 

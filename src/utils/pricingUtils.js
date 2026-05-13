@@ -10,15 +10,22 @@
 
 /**
  * Parse a currency string (e.g. "$1,234.56") into a float.
+ *
  * Strips non-numeric characters except decimal point and minus sign.
+ * Also recognises accounting-format negatives — values wrapped in
+ * parentheses such as `($50.00)` or `(1,234.56)` — which several POS
+ * systems use for returns and credits.
  *
  * @param {string|number|null|undefined} str - Input value to parse.
  * @returns {number} Parsed float, or 0 if parsing fails.
  */
 export function parseCurrency(str) {
   if (str === null || str === undefined || str === '') return 0;
-  const cleanStr = str.toString().replace(/[^0-9.-]+/g, '');
-  return parseFloat(cleanStr) || 0;
+  const raw = str.toString().trim();
+  const isAccountingNegative = /^\(.*\)$/.test(raw);
+  const cleanStr = raw.replace(/[^0-9.-]+/g, '');
+  const value = parseFloat(cleanStr) || 0;
+  return isAccountingNegative ? -Math.abs(value) : value;
 }
 
 /**

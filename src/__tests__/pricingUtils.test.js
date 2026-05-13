@@ -44,6 +44,14 @@ describe('parseCurrency', () => {
     expect(parseCurrency('-50.00')).toBe(-50);
   });
 
+  it('treats parenthesised values as accounting-format negatives', () => {
+    // POS exports commonly format returns/credits as ($50.00)
+    expect(parseCurrency('(50.00)')).toBe(-50);
+    expect(parseCurrency('($50.00)')).toBe(-50);
+    expect(parseCurrency('($1,234.56)')).toBe(-1234.56);
+    expect(parseCurrency('  ($25.00)  ')).toBe(-25);
+  });
+
   it('returns 0 for empty string', () => {
     expect(parseCurrency('')).toBe(0);
   });

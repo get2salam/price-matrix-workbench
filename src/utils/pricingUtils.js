@@ -12,10 +12,11 @@
  * Parse a currency string (e.g. "$1,234.56") into a float.
  *
  * Strips non-numeric characters except decimal point and minus sign.
- * Also recognises two accounting-format negatives commonly emitted by
+ * Also recognises three accounting-format negatives commonly emitted by
  * POS and ERP exports for returns and credits:
  *   - Parenthesised:   `($50.00)`, `(1,234.56)`
  *   - Trailing minus:  `50.00-`, `$1,234.56-` (SAP / AS/400 style)
+ *   - Trailing `CR`:   `50.00 CR`, `$1,234.56CR` (general-ledger credit memos)
  *
  * @param {string|number|null|undefined} str - Input value to parse.
  * @returns {number} Parsed float, or 0 if parsing fails.
@@ -25,9 +26,12 @@ export function parseCurrency(str) {
   const raw = str.toString().trim();
   const isAccountingNegative = /^\(.*\)$/.test(raw);
   const isTrailingMinus = /\d-$/.test(raw);
+  const isCreditSuffix = /\d\s*CR$/i.test(raw);
   const cleanStr = raw.replace(/[^0-9.-]+/g, '');
   const value = parseFloat(cleanStr) || 0;
-  return isAccountingNegative || isTrailingMinus ? -Math.abs(value) : value;
+  return isAccountingNegative || isTrailingMinus || isCreditSuffix
+    ? -Math.abs(value)
+    : value;
 }
 
 /**

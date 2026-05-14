@@ -60,6 +60,15 @@ describe('parseCurrency', () => {
     expect(parseCurrency('  $1,234.56-  ')).toBe(-1234.56);
   });
 
+  it('treats trailing-CR values as accounting-format negatives', () => {
+    // General-ledger and bank-style exports format credit memos as "50.00 CR"
+    expect(parseCurrency('50.00 CR')).toBe(-50);
+    expect(parseCurrency('50.00CR')).toBe(-50);
+    expect(parseCurrency('$1,234.56 CR')).toBe(-1234.56);
+    expect(parseCurrency('$1,234.56cr')).toBe(-1234.56);
+    expect(parseCurrency('  50.00 CR  ')).toBe(-50);
+  });
+
   it('returns 0 for empty string', () => {
     expect(parseCurrency('')).toBe(0);
   });

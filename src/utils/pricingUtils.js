@@ -18,12 +18,16 @@
  *   - Trailing minus:  `50.00-`, `$1,234.56-` (SAP / AS/400 style)
  *   - Trailing `CR`:   `50.00 CR`, `$1,234.56CR` (general-ledger credit memos)
  *
+ * The Unicode "minus sign" character (U+2212), which Excel and macOS Numbers
+ * emit in place of the ASCII hyphen-minus, is normalised so that values like
+ * `−50.00` are recognised as negatives.
+ *
  * @param {string|number|null|undefined} str - Input value to parse.
  * @returns {number} Parsed float, or 0 if parsing fails.
  */
 export function parseCurrency(str) {
   if (str === null || str === undefined || str === '') return 0;
-  const raw = str.toString().trim();
+  const raw = str.toString().trim().replace(/−/g, '-');
   const isAccountingNegative = /^\(.*\)$/.test(raw);
   const isTrailingMinus = /\d-$/.test(raw);
   const isCreditSuffix = /\d\s*CR$/i.test(raw);

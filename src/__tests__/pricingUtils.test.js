@@ -69,6 +69,16 @@ describe('parseCurrency', () => {
     expect(parseCurrency('  50.00 CR  ')).toBe(-50);
   });
 
+  it('recognises the Unicode minus sign (U+2212) as negative', () => {
+    // Excel and macOS Numbers emit U+2212 ("MINUS SIGN") for negatives
+    // rather than the ASCII hyphen-minus.
+    expect(parseCurrency('−50.00')).toBe(-50);
+    expect(parseCurrency('$−50.00')).toBe(-50);
+    expect(parseCurrency('−$1,234.56')).toBe(-1234.56);
+    expect(parseCurrency('50.00−')).toBe(-50);
+    expect(parseCurrency('(−50.00)')).toBe(-50);
+  });
+
   it('returns 0 for empty string', () => {
     expect(parseCurrency('')).toBe(0);
   });

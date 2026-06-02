@@ -4,7 +4,8 @@
  * Handles real-world CSV quirks commonly found in POS system exports:
  *  - UTF-8 BOM stripping
  *  - Windows-style \r\n line endings
- *  - Quoted fields containing commas (e.g. "Smith, John")
+ *  - Auto-detected delimiter (comma, semicolon, tab) for European/TSV exports
+ *  - Quoted fields containing the delimiter (e.g. "Smith, John")
  *  - Escaped quotes inside quoted fields ("")
  *  - Currency-formatted numbers ($1,234.56)
  *  - Header rows that don't appear on line 1 (up to 10 lines down)
@@ -90,20 +91,51 @@ function findColumnIndex(headers, matchers) {
   return -1;
 }
 
+// ─── Delimiter detection ─────────────────────────────────────────────────────
+
+const SUPPORTED_DELIMITERS = [',', ';', '\t'];
+
+/**
+ * Auto-detect the field delimiter used in a CSV/TSV body.
+ *
+ * Many European POS systems export with `;` (because the decimal comma
+ * conflicts with `,` as a field separator), and ERP exports sometimes
+ * use tab-separated values. We pick the candidate with the highest total
+ * occurrence count across the first 10 non-empty lines, falling back to
+ * comma when no delimiter is present.
+ *
+ * @param {string} text - Raw CSV text (BOM already stripped).
+ * @returns {string} One of ',', ';' or '\t'.
+ */
+export function detectDelimiter(text) {
+  const sample = text.split(/\r?\n/).filter((l) => l.trim()).slice(0, 10);
+  let best = ',';
+  let bestCount = 0;
+  for (const delim of SUPPORTED_DELIMITERS) {
+    const count = sample.reduce((sum, line) => sum + (line.split(delim).length - 1), 0);
+    if (count > bestCount) {
+      bestCount = count;
+      best = delim;
+    }
+  }
+  return best;
+}
+
 // ─── RFC 4180 field splitter ─────────────────────────────────────────────────
 
 /**
  * Split a single CSV line into fields, respecting RFC 4180 quoting rules.
  *
  * Handles:
- *  - Quoted fields containing commas
+ *  - Quoted fields containing the delimiter
  *  - Escaped double-quotes ("")
- *  - Trailing commas (empty last field)
+ *  - Trailing delimiter (empty last field)
  *
  * @param {string} line - Raw CSV line.
+ * @param {string} [delimiter=','] - Field delimiter character.
  * @returns {string[]} Array of unquoted field values (whitespace-trimmed).
  */
-export function splitCSVLine(line) {
+export function splitCSVLine(line, delimiter = ',') {
   const fields = [];
   let current = '';
   let insideQuotes = false;
@@ -120,7 +152,7 @@ export function splitCSVLine(line) {
       } else {
         insideQuotes = !insideQuotes;
       }
-    } else if (char === ',' && !insideQuotes) {
+    } else if (char === delimiter && !insideQuotes) {
       fields.push(current.trim());
       current = '';
     } else {
@@ -144,14 +176,15 @@ const HEADER_KEYWORDS = ['cost', 'price', 'qty', 'quantity', 'total', 'retail', 
  *
  * @param {string[]} lines - All non-empty lines from the CSV.
  * @param {number}   [maxLines=10] - Maximum number of lines to scan.
+ * @param {string}   [delimiter=','] - Field delimiter character.
  * @returns {{ headerRowIndex: number, headers: string[] }}
  */
-export function findHeaderRow(lines, maxLines = 10) {
+export function findHeaderRow(lines, maxLines = 10, delimiter = ',') {
   for (let i = 0; i < Math.min(lines.length, maxLines); i++) {
     const lower = lines[i].toLowerCase();
     const hasKeyword = HEADER_KEYWORDS.some((kw) => lower.includes(kw));
     if (hasKeyword) {
-      const headers = splitCSVLine(lines[i]).map((h) => h.toLowerCase());
+      const headers = splitCSVLine(lines[i], delimiter).map((h) => h.toLowerCase());
       return { headerRowIndex: i, headers };
     }
   }
@@ -213,8 +246,9 @@ export function parseCSV(csvText) {
   const text = csvText.replace(/^\uFEFF/, '');
   const lines = text.split(/\r?\n/).filter((line) => line.trim());
 
-  // Locate header row
-  const { headerRowIndex, headers } = findHeaderRow(lines);
+  // Auto-detect delimiter (comma, semicolon, or tab) and locate header row
+  const delimiter = detectDelimiter(text);
+  const { headerRowIndex, headers } = findHeaderRow(lines, 10, delimiter);
   if (headerRowIndex === -1) {
     return {
       parts: [],
@@ -253,7 +287,7 @@ export function parseCSV(csvText) {
   let skippedCount = 0;
 
   for (let i = headerRowIndex + 1; i < lines.length; i++) {
-    const fields = splitCSVLine(lines[i]);
+    const fields = splitCSVLine(lines[i], delimiter);
 
     // Skip completely empty rows
     if (!fields.length || fields.every((f) => !f)) {

@@ -12,6 +12,7 @@ import {
   resolveTotalCost,
   resolveTotalRetail,
   parseCSV,
+  detectDelimiter,
 } from '../utils/csvParser.js';
 
 // ─── splitCSVLine ────────────────────────────────────────────────────────────
@@ -56,6 +57,46 @@ describe('splitCSVLine', () => {
 
   it('handles blank line', () => {
     expect(splitCSVLine('')).toEqual(['']);
+  });
+});
+
+// ─── detectDelimiter ─────────────────────────────────────────────────────────
+
+describe('detectDelimiter', () => {
+  it('defaults to comma when the body is empty', () => {
+    expect(detectDelimiter('')).toBe(',');
+  });
+
+  it('returns comma for comma-separated content', () => {
+    expect(detectDelimiter('Part,Cost,Qty\nFilter,3.25,10')).toBe(',');
+  });
+
+  it('returns semicolon for European-style CSV exports', () => {
+    expect(detectDelimiter('Part;Cost;Qty\nFilter;3,25;10')).toBe(';');
+  });
+
+  it('returns tab for TSV exports', () => {
+    expect(detectDelimiter('Part\tCost\tQty\nFilter\t3.25\t10')).toBe('\t');
+  });
+});
+
+// ─── splitCSVLine with custom delimiter ──────────────────────────────────────
+
+describe('splitCSVLine (custom delimiter)', () => {
+  it('splits on semicolons when delimiter is ";"', () => {
+    expect(splitCSVLine('a;b;c', ';')).toEqual(['a', 'b', 'c']);
+  });
+
+  it('preserves commas inside fields when delimiter is ";"', () => {
+    expect(splitCSVLine('1.234,56;Smith, John;10', ';')).toEqual([
+      '1.234,56',
+      'Smith, John',
+      '10',
+    ]);
+  });
+
+  it('splits on tabs when delimiter is "\\t"', () => {
+    expect(splitCSVLine('a\tb\tc', '\t')).toEqual(['a', 'b', 'c']);
   });
 });
 
@@ -230,6 +271,30 @@ describe('parseCSV', () => {
       const result = parseCSV(csv);
       expect(result.error).toBeNull();
       expect(result.parts[0].unitCost).toBeCloseTo(3.25, 2);
+      expect(result.parts[0].unitRetail).toBeCloseTo(12.99, 2);
+    });
+
+    it('parses semicolon-delimited European-style exports', () => {
+      const csv = [
+        'Part Name;Unit Cost;Unit Retail;Qty',
+        'Oil Filter;3.25;12.99;10',
+        'Brake Pads;18.00;54.99;5',
+      ].join('\n');
+      const result = parseCSV(csv);
+      expect(result.error).toBeNull();
+      expect(result.parts).toHaveLength(2);
+      expect(result.parts[0].unitCost).toBeCloseTo(3.25, 2);
+      expect(result.parts[1].qty).toBe(5);
+    });
+
+    it('parses tab-delimited (TSV) exports', () => {
+      const csv = [
+        'Part Name\tUnit Cost\tUnit Retail\tQty',
+        'Oil Filter\t3.25\t12.99\t10',
+      ].join('\n');
+      const result = parseCSV(csv);
+      expect(result.error).toBeNull();
+      expect(result.parts).toHaveLength(1);
       expect(result.parts[0].unitRetail).toBeCloseTo(12.99, 2);
     });
 

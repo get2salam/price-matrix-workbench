@@ -69,6 +69,28 @@ describe('parseCurrency', () => {
     expect(parseCurrency('  50.00 CR  ')).toBe(-50);
   });
 
+  it('parses European decimal-comma values', () => {
+    // Continental-European POS systems (and semicolon-delimited exports in
+    // particular) use "," as the decimal separator and "." for thousands.
+    expect(parseCurrency('1234,56')).toBeCloseTo(1234.56, 2);
+    expect(parseCurrency('1.234,56')).toBeCloseTo(1234.56, 2);
+    expect(parseCurrency('1.234.567,89')).toBeCloseTo(1234567.89, 2);
+    expect(parseCurrency('€1.234,56')).toBeCloseTo(1234.56, 2);
+    expect(parseCurrency('-1.234,56')).toBeCloseTo(-1234.56, 2);
+    expect(parseCurrency('(1.234,56)')).toBeCloseTo(-1234.56, 2);
+    expect(parseCurrency('1.234,56-')).toBeCloseTo(-1234.56, 2);
+    // Short EU values: '1,5' is 1.5 (not "1 point 5 thousand")
+    expect(parseCurrency('1,5')).toBeCloseTo(1.5, 2);
+  });
+
+  it('keeps US thousand-separator behaviour for ambiguous "1,234" forms', () => {
+    // Single comma followed by exactly 3 digits is ambiguous between US
+    // thousands (1234) and EU decimals (1.234). Preserve the existing US
+    // interpretation so plain "10,000" stays at 10000.
+    expect(parseCurrency('10,000')).toBe(10000);
+    expect(parseCurrency('1,000,000')).toBe(1000000);
+  });
+
   it('recognises the Unicode minus sign (U+2212) as negative', () => {
     // Excel and macOS Numbers emit U+2212 ("MINUS SIGN") for negatives
     // rather than the ASCII hyphen-minus.

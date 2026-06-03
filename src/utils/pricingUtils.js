@@ -9,6 +9,33 @@
  */
 
 /**
+ * Normalise a numeric string that may use European decimal-comma notation.
+ *
+ * Returns the input with the decimal separator coerced to `.` so the
+ * standard `parseFloat` can handle it. Detection rules:
+ *   - Both `.` and `,` present → whichever appears LAST is the decimal
+ *     (`1.234,56` is EU, `1,234.56` is US).
+ *   - Only one comma with 1–2 or 4+ trailing digits → EU decimal (`1234,56`).
+ *   - Single comma with exactly 3 trailing digits (e.g. `10,000`) is
+ *     ambiguous and left untouched so it is treated as a US thousands
+ *     separator by the caller's strip step (existing behaviour).
+ *   - Multiple commas with no dot → US thousands (`1,000,000`).
+ */
+function normalizeDecimalSeparator(str) {
+  const lastDot = str.lastIndexOf('.');
+  const lastComma = str.lastIndexOf(',');
+  if (lastComma === -1) return str;
+  if (lastDot !== -1) {
+    return lastComma > lastDot
+      ? str.replace(/\./g, '').replace(/,/g, '.')
+      : str;
+  }
+  if (str.indexOf(',') !== lastComma) return str;
+  const digitsAfter = (str.slice(lastComma + 1).match(/\d/g) || []).length;
+  return digitsAfter === 3 ? str : str.replace(',', '.');
+}
+
+/**
  * Parse a currency string (e.g. "$1,234.56") into a float.
  *
  * Strips non-numeric characters except decimal point and minus sign.
@@ -22,6 +49,10 @@
  * emit in place of the ASCII hyphen-minus, is normalised so that values like
  * `−50.00` are recognised as negatives.
  *
+ * European decimal-comma notation (e.g. `1.234,56`, `1234,56`) — common in
+ * semicolon-delimited POS exports from continental Europe — is normalised to
+ * dot-decimal before parsing.
+ *
  * @param {string|number|null|undefined} str - Input value to parse.
  * @returns {number} Parsed float, or 0 if parsing fails.
  */
@@ -31,7 +62,8 @@ export function parseCurrency(str) {
   const isAccountingNegative = /^\(.*\)$/.test(raw);
   const isTrailingMinus = /\d-$/.test(raw);
   const isCreditSuffix = /\d\s*CR$/i.test(raw);
-  const cleanStr = raw.replace(/[^0-9.-]+/g, '');
+  const normalized = normalizeDecimalSeparator(raw);
+  const cleanStr = normalized.replace(/[^0-9.-]+/g, '');
   const value = parseFloat(cleanStr) || 0;
   return isAccountingNegative || isTrailingMinus || isCreditSuffix
     ? -Math.abs(value)

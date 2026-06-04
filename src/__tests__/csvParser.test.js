@@ -78,6 +78,10 @@ describe('detectDelimiter', () => {
   it('returns tab for TSV exports', () => {
     expect(detectDelimiter('Part\tCost\tQty\nFilter\t3.25\t10')).toBe('\t');
   });
+
+  it('returns pipe for SAP / Oracle EBS-style exports', () => {
+    expect(detectDelimiter('Part|Cost|Qty\nFilter|3.25|10')).toBe('|');
+  });
 });
 
 // ─── splitCSVLine with custom delimiter ──────────────────────────────────────
@@ -296,6 +300,19 @@ describe('parseCSV', () => {
       expect(result.error).toBeNull();
       expect(result.parts).toHaveLength(1);
       expect(result.parts[0].unitRetail).toBeCloseTo(12.99, 2);
+    });
+
+    it('parses pipe-delimited SAP / Oracle EBS exports', () => {
+      const csv = [
+        'Part Name|Unit Cost|Unit Retail|Qty',
+        'Oil Filter|3.25|12.99|10',
+        'Brake Pads|18.00|54.99|5',
+      ].join('\n');
+      const result = parseCSV(csv);
+      expect(result.error).toBeNull();
+      expect(result.parts).toHaveLength(2);
+      expect(result.parts[0].unitCost).toBeCloseTo(3.25, 2);
+      expect(result.parts[1].qty).toBe(5);
     });
 
     it('handles CSV without retail column (defaults to 0)', () => {

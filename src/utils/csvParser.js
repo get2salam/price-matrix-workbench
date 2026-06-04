@@ -4,7 +4,8 @@
  * Handles real-world CSV quirks commonly found in POS system exports:
  *  - UTF-8 BOM stripping
  *  - Windows-style \r\n line endings
- *  - Auto-detected delimiter (comma, semicolon, tab) for European/TSV exports
+ *  - Auto-detected delimiter (comma, semicolon, tab, pipe) for European, TSV
+ *    and legacy ERP (SAP, Oracle EBS) exports
  *  - Quoted fields containing the delimiter (e.g. "Smith, John")
  *  - Escaped quotes inside quoted fields ("")
  *  - Currency-formatted numbers ($1,234.56)
@@ -93,19 +94,20 @@ function findColumnIndex(headers, matchers) {
 
 // ─── Delimiter detection ─────────────────────────────────────────────────────
 
-const SUPPORTED_DELIMITERS = [',', ';', '\t'];
+const SUPPORTED_DELIMITERS = [',', ';', '\t', '|'];
 
 /**
  * Auto-detect the field delimiter used in a CSV/TSV body.
  *
  * Many European POS systems export with `;` (because the decimal comma
- * conflicts with `,` as a field separator), and ERP exports sometimes
- * use tab-separated values. We pick the candidate with the highest total
- * occurrence count across the first 10 non-empty lines, falling back to
- * comma when no delimiter is present.
+ * conflicts with `,` as a field separator), ERP exports sometimes use
+ * tab-separated values, and legacy SAP / Oracle EBS exports default to
+ * pipe (`|`). We pick the candidate with the highest total occurrence
+ * count across the first 10 non-empty lines, falling back to comma when
+ * no delimiter is present.
  *
  * @param {string} text - Raw CSV text (BOM already stripped).
- * @returns {string} One of ',', ';' or '\t'.
+ * @returns {string} One of ',', ';', '\t' or '|'.
  */
 export function detectDelimiter(text) {
   const sample = text.split(/\r?\n/).filter((l) => l.trim()).slice(0, 10);

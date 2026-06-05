@@ -201,10 +201,13 @@ export function splitCSVLine(line, delimiter = ',') {
 
 // ─── Header scanner ──────────────────────────────────────────────────────────
 
-const HEADER_KEYWORDS = ['cost', 'price', 'qty', 'quantity', 'total', 'retail', 'sell'];
-
 /**
  * Scan the first `maxLines` rows to find the header row.
+ *
+ * Tokenises each candidate line and accepts it only when at least one field
+ * matches one of the column matchers above. Substring-on-whole-line matching
+ * would also flag narrative junk lines like `Note: prices include cost of
+ * shipping` as headers, then mis-parse the next row as data.
  *
  * Returns the header row index and the lowercase token array, or
  * `{ headerRowIndex: -1, headers: [] }` if no header is found.
@@ -216,12 +219,15 @@ const HEADER_KEYWORDS = ['cost', 'price', 'qty', 'quantity', 'total', 'retail', 
  */
 export function findHeaderRow(lines, maxLines = 10, delimiter = ',') {
   for (let i = 0; i < Math.min(lines.length, maxLines); i++) {
-    const lower = lines[i].toLowerCase();
-    const hasKeyword = HEADER_KEYWORDS.some((kw) => lower.includes(kw));
-    if (hasKeyword) {
-      const headers = splitCSVLine(lines[i], delimiter).map((h) => h.toLowerCase());
-      return { headerRowIndex: i, headers };
-    }
+    const headers = splitCSVLine(lines[i], delimiter).map((h) => h.toLowerCase());
+    if (headers.length < 2) continue;
+    const looksLikeHeader =
+      findColumnIndex(headers, COST_MATCHERS) !== -1 ||
+      findColumnIndex(headers, RETAIL_MATCHERS) !== -1 ||
+      findColumnIndex(headers, QTY_MATCHERS) !== -1 ||
+      findColumnIndex(headers, TOTAL_COST_MATCHERS) !== -1 ||
+      findColumnIndex(headers, TOTAL_RETAIL_MATCHERS) !== -1;
+    if (looksLikeHeader) return { headerRowIndex: i, headers };
   }
   return { headerRowIndex: -1, headers: [] };
 }

@@ -158,6 +158,21 @@ describe('findHeaderRow', () => {
     const { headerRowIndex } = findHeaderRow(lines);
     expect(headerRowIndex).toBe(0);
   });
+
+  it('skips narrative junk lines that contain header-like words', () => {
+    // Prior heuristic matched any substring like "cost" or "price" against
+    // the entire line, so report preambles with sentences such as
+    // "prices include cost of shipping" were mis-identified as the header
+    // row, causing the next real header to be mis-parsed as data.
+    const lines = [
+      'Note: prices include cost of shipping and any sell-through fees',
+      'Part Name,Unit Cost,Unit Retail,Qty',
+      'Oil Filter,3.25,12.99,10',
+    ];
+    const { headerRowIndex, headers } = findHeaderRow(lines);
+    expect(headerRowIndex).toBe(1);
+    expect(headers).toContain('unit cost');
+  });
 });
 
 // ─── resolveTotalCost ────────────────────────────────────────────────────────

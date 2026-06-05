@@ -97,14 +97,44 @@ function findColumnIndex(headers, matchers) {
 const SUPPORTED_DELIMITERS = [',', ';', '\t', '|'];
 
 /**
+ * Count occurrences of `delim` in `line` that fall OUTSIDE quoted fields.
+ *
+ * Without this, a semicolon-delimited row whose description field contains
+ * commas (e.g. `Filter;"Premium, OEM-spec, fits 1.6L";10`) would inflate the
+ * comma tally and trip the delimiter heuristic into picking `,`.
+ *
+ * @param {string} line - Single CSV line.
+ * @param {string} delim - Candidate delimiter character.
+ * @returns {number} Count of delimiters appearing outside double-quoted spans.
+ */
+function countDelimitersOutsideQuotes(line, delim) {
+  let count = 0;
+  let insideQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (insideQuotes && line[i + 1] === '"') {
+        i++; // skip escaped quote
+      } else {
+        insideQuotes = !insideQuotes;
+      }
+    } else if (char === delim && !insideQuotes) {
+      count++;
+    }
+  }
+  return count;
+}
+
+/**
  * Auto-detect the field delimiter used in a CSV/TSV body.
  *
  * Many European POS systems export with `;` (because the decimal comma
  * conflicts with `,` as a field separator), ERP exports sometimes use
  * tab-separated values, and legacy SAP / Oracle EBS exports default to
  * pipe (`|`). We pick the candidate with the highest total occurrence
- * count across the first 10 non-empty lines, falling back to comma when
- * no delimiter is present.
+ * count across the first 10 non-empty lines — ignoring any occurrences
+ * that appear inside quoted fields — and fall back to comma when no
+ * delimiter is present.
  *
  * @param {string} text - Raw CSV text (BOM already stripped).
  * @returns {string} One of ',', ';', '\t' or '|'.
@@ -114,7 +144,10 @@ export function detectDelimiter(text) {
   let best = ',';
   let bestCount = 0;
   for (const delim of SUPPORTED_DELIMITERS) {
-    const count = sample.reduce((sum, line) => sum + (line.split(delim).length - 1), 0);
+    const count = sample.reduce(
+      (sum, line) => sum + countDelimitersOutsideQuotes(line, delim),
+      0,
+    );
     if (count > bestCount) {
       bestCount = count;
       best = delim;

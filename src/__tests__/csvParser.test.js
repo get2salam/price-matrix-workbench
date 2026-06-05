@@ -82,6 +82,19 @@ describe('detectDelimiter', () => {
   it('returns pipe for SAP / Oracle EBS-style exports', () => {
     expect(detectDelimiter('Part|Cost|Qty\nFilter|3.25|10')).toBe('|');
   });
+
+  it('ignores delimiters inside quoted fields', () => {
+    // Semicolon-delimited CSV whose description column carries unrelated
+    // commas. Without quote-aware counting, the comma tally outnumbers the
+    // semicolon tally and the parser mis-detects the delimiter.
+    const csv = [
+      'Part;Description;Qty',
+      'Filter;"Premium, OEM-spec, fits 1.6L";10',
+      'Pads;"Ceramic, low-dust, sport-tuned";5',
+      'AirFilter;"K&N, washable, lifetime warranty";20',
+    ].join('\n');
+    expect(detectDelimiter(csv)).toBe(';');
+  });
 });
 
 // ─── splitCSVLine with custom delimiter ──────────────────────────────────────

@@ -28,11 +28,23 @@ import { parseCurrency } from './pricingUtils.js';
  */
 
 /**
- * @typedef {Object} ParseResult
- * @property {ParsedPart[]} parts        - Successfully parsed rows.
- * @property {number}       skippedCount - Number of rows skipped.
- * @property {string|null}  error        - Fatal error message, or null on success.
+ * @typedef {Object} SkipBreakdown
+ * @property {number} blank    - Rows that were empty or whitespace-only after splitting.
+ * @property {number} shortRow - Rows with fewer columns than the header requires.
+ * @property {number} zeroCost - Rows skipped because unit cost was ≤ 0 (warranties, samples).
  */
+
+/**
+ * @typedef {Object} ParseResult
+ * @property {ParsedPart[]}  parts        - Successfully parsed rows.
+ * @property {number}        skippedCount - Total rows skipped (sum of all breakdown counts).
+ * @property {SkipBreakdown} skipped      - Per-reason skip counts for user-facing diagnostics.
+ * @property {string|null}   error        - Fatal error message, or null on success.
+ */
+
+function emptySkipBreakdown() {
+  return { blank: 0, shortRow: 0, zeroCost: 0 };
+}
 
 // ─── Column name matchers ────────────────────────────────────────────────────
 
@@ -279,10 +291,25 @@ export function resolveTotalRetail(unitRetail, qty, csvTotal) {
 /**
  * Parse a CSV text string into an array of auto-parts rows.
  *
+ * Non-string input (null, undefined, a File, an ArrayBuffer, etc.) returns a
+ * clean error result rather than throwing \u2014 the upload path is downstream of a
+ * FileReader whose `result` field is only weakly typed, and a thrown TypeError
+ * inside `onload` is hard to surface to the user.
+ *
  * @param {string} csvText - Raw CSV content (may include BOM).
  * @returns {ParseResult} Parsed parts and diagnostics.
  */
 export function parseCSV(csvText) {
+  if (typeof csvText !== 'string') {
+    const received = csvText === null ? 'null' : typeof csvText;
+    return {
+      parts: [],
+      skippedCount: 0,
+      skipped: emptySkipBreakdown(),
+      error: `Expected CSV text as a string, received ${received}.`,
+    };
+  }
+
   // Strip UTF-8 BOM
   const text = csvText.replace(/^\uFEFF/, '');
   const lines = text.split(/\r?\n/).filter((line) => line.trim());
@@ -294,6 +321,7 @@ export function parseCSV(csvText) {
     return {
       parts: [],
       skippedCount: 0,
+      skipped: emptySkipBreakdown(),
       error:
         'Could not find a valid header row (looking for "Cost", "Price", or "Qty"). Please check your CSV.',
     };
@@ -310,6 +338,7 @@ export function parseCSV(csvText) {
     return {
       parts: [],
       skippedCount: 0,
+      skipped: emptySkipBreakdown(),
       error:
         'Could not find a "Unit Cost" or "Buy Price" column. Please ensure your file has cost data.',
     };
@@ -325,20 +354,20 @@ export function parseCSV(csvText) {
     ) + 1;
 
   const parts = [];
-  let skippedCount = 0;
+  const skipped = emptySkipBreakdown();
 
   for (let i = headerRowIndex + 1; i < lines.length; i++) {
     const fields = splitCSVLine(lines[i], delimiter);
 
     // Skip completely empty rows
     if (!fields.length || fields.every((f) => !f)) {
-      skippedCount++;
+      skipped.blank++;
       continue;
     }
 
     // Skip rows with too few columns
     if (fields.length < requiredColumns) {
-      skippedCount++;
+      skipped.shortRow++;
       continue;
     }
 
@@ -355,21 +384,24 @@ export function parseCSV(csvText) {
 
     // Skip zero-cost items (warranties, free samples, etc.)
     if (unitCost <= 0) {
-      skippedCount++;
+      skipped.zeroCost++;
       continue;
     }
 
     parts.push({ unitCost, unitRetail, qty, totalCost, totalRetail });
   }
 
+  const skippedCount = skipped.blank + skipped.shortRow + skipped.zeroCost;
+
   if (!parts.length) {
     return {
       parts: [],
       skippedCount,
+      skipped,
       error:
         'No valid parts data found. Please check your CSV format. Make sure you have a "Unit Cost" column with numeric values.',
     };
   }
 
-  return { parts, skippedCount, error: null };
+  return { parts, skippedCount, skipped, error: null };
 }

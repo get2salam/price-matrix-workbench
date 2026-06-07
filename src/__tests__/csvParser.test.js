@@ -440,6 +440,69 @@ describe('parseCSV', () => {
       const result = parseCSV(csv);
       expect(result.skippedCount).toBe(1);
     });
+
+    it('breaks down skipped rows by reason for diagnostics', () => {
+      const csv = makeCSV(STANDARD_HEADER, [
+        makeRow('Regular', 5.0, 15.0, 3),
+        makeRow('Free Item', 0.0, 0.0, 1),       // zero-cost
+        makeRow('Another Free', 0.0, 0.0, 1),    // zero-cost
+        'TooShort,1.00',                         // short row
+      ]);
+      const result = parseCSV(csv);
+      expect(result.error).toBeNull();
+      expect(result.parts).toHaveLength(1);
+      expect(result.skipped).toEqual({ blank: 0, shortRow: 1, zeroCost: 2 });
+      expect(result.skippedCount).toBe(3);
+    });
+
+    it('reports an empty skip breakdown on a clean parse', () => {
+      const csv = makeCSV(STANDARD_HEADER, [
+        makeRow('Oil Filter', 3.25, 12.99, 10),
+      ]);
+      const result = parseCSV(csv);
+      expect(result.skipped).toEqual({ blank: 0, shortRow: 0, zeroCost: 0 });
+      expect(result.skippedCount).toBe(0);
+    });
+
+    it('keeps skippedCount in sync with the breakdown when the parse fails late', () => {
+      // All rows are zero-cost → fatal error, but breakdown still tells the
+      // caller why nothing made it through.
+      const csv = makeCSV(STANDARD_HEADER, [
+        makeRow('Free A', 0.0, 0.0, 1),
+        makeRow('Free B', 0.0, 0.0, 1),
+      ]);
+      const result = parseCSV(csv);
+      expect(result.error).toMatch(/no valid parts/i);
+      expect(result.skipped.zeroCost).toBe(2);
+      expect(result.skippedCount).toBe(2);
+    });
+  });
+
+  describe('defensive input handling', () => {
+    it('returns a clean error for null input rather than throwing', () => {
+      const result = parseCSV(null);
+      expect(result.error).toMatch(/string/i);
+      expect(result.parts).toEqual([]);
+      expect(result.skipped).toEqual({ blank: 0, shortRow: 0, zeroCost: 0 });
+    });
+
+    it('returns a clean error for undefined input rather than throwing', () => {
+      const result = parseCSV(undefined);
+      expect(result.error).toMatch(/string/i);
+      expect(result.parts).toEqual([]);
+    });
+
+    it('returns a clean error for non-string input (e.g. ArrayBuffer)', () => {
+      const result = parseCSV(new ArrayBuffer(8));
+      expect(result.error).toMatch(/string/i);
+      expect(result.parts).toEqual([]);
+    });
+
+    it('returns a clean error for numeric input rather than coercing it', () => {
+      const result = parseCSV(42);
+      expect(result.error).toMatch(/number/);
+      expect(result.parts).toEqual([]);
+    });
   });
 
   describe('alternative column naming', () => {

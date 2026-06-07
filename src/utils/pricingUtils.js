@@ -288,6 +288,52 @@ export function computeTierAnalysis(parts, matrix) {
 }
 
 /**
+ * Summarise parts whose unit cost does not fall inside any tier in the matrix.
+ *
+ * `computeTierAnalysis` silently drops such parts (gap zones between tiers,
+ * negative returns, or parts above the highest tier when no open-ended
+ * catch-all is configured), so revenue and profit totals understate the real
+ * dataset without any signal to the UI. This helper exposes the missing
+ * surface so callers can warn the user — "N parts totalling $X did not match
+ * any pricing tier" — and optionally jump into the matrix editor to plug the
+ * gap.
+ *
+ * @param {Array<{unitCost: number, qty?: number, totalCost?: number, totalRetail?: number}>} parts
+ * @param {Array<{minCost: number, maxCost: number}>} matrix
+ * @returns {{
+ *   count: number,
+ *   totalQty: number,
+ *   totalCost: number,
+ *   totalRetail: number,
+ *   minUnitCost: number|null,
+ *   maxUnitCost: number|null,
+ * }}
+ */
+export function summarizeUnassignedParts(parts, matrix) {
+  let count = 0;
+  let totalQty = 0;
+  let totalCost = 0;
+  let totalRetail = 0;
+  let minUnitCost = null;
+  let maxUnitCost = null;
+
+  for (const part of parts) {
+    const matches = matrix.some(
+      (tier) => part.unitCost >= tier.minCost && part.unitCost <= tier.maxCost,
+    );
+    if (matches) continue;
+    count += 1;
+    totalQty += part.qty ?? 0;
+    totalCost += part.totalCost ?? 0;
+    totalRetail += part.totalRetail ?? 0;
+    minUnitCost = minUnitCost === null ? part.unitCost : Math.min(minUnitCost, part.unitCost);
+    maxUnitCost = maxUnitCost === null ? part.unitCost : Math.max(maxUnitCost, part.unitCost);
+  }
+
+  return { count, totalQty, totalCost, totalRetail, minUnitCost, maxUnitCost };
+}
+
+/**
  * Calculate the overall gross profit margin across all tier analyses.
  *
  * @param {Array<{totalCost: number, totalRetail: number}>} tierAnalysis

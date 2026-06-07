@@ -18,6 +18,7 @@ import {
   detectRangeIssues,
   computeMatrixSummary,
   computeTierAnalysis,
+  summarizeUnassignedParts,
   computeOverallMargin,
   computeTargetProfit,
   isTargetMarginTooLow,
@@ -434,6 +435,131 @@ describe('computeTierAnalysis', () => {
     const analysis = computeTierAnalysis(boundaryParts, matrix);
     const totalParts = analysis.reduce((sum, t) => sum + t.partCount, 0);
     expect(totalParts).toBe(1);
+  });
+});
+
+// ─── summarizeUnassignedParts ────────────────────────────────────────────────
+
+describe('summarizeUnassignedParts', () => {
+  const matrix = [
+    { id: 1, minCost: 0, maxCost: 1.5, multiplier: 5.0, grossProfit: 80 },
+    { id: 2, minCost: 1.51, maxCost: 6.0, multiplier: 4.76, grossProfit: 79 },
+    { id: 3, minCost: 6.01, maxCost: 999999, multiplier: 3.7, grossProfit: 73 },
+  ];
+
+  it('reports zero unassigned for a fully covering matrix', () => {
+    const parts = [
+      { unitCost: 0.5, unitRetail: 2.5, qty: 10, totalCost: 5, totalRetail: 25 },
+      { unitCost: 3.0, unitRetail: 12.0, qty: 5, totalCost: 15, totalRetail: 60 },
+      { unitCost: 50, unitRetail: 150, qty: 1, totalCost: 50, totalRetail: 150 },
+    ];
+    const summary = summarizeUnassignedParts(parts, matrix);
+    expect(summary.count).toBe(0);
+    expect(summary.totalCost).toBe(0);
+    expect(summary.totalRetail).toBe(0);
+    expect(summary.totalQty).toBe(0);
+    expect(summary.minUnitCost).toBeNull();
+    expect(summary.maxUnitCost).toBeNull();
+  });
+
+  it('counts a part whose cost falls in a tier gap', () => {
+    // Matrix has a real gap from 1.51 to 4.99 — simulate a misconfigured matrix.
+    const gapped = [
+      { id: 1, minCost: 0, maxCost: 1.5, multiplier: 5, grossProfit: 80 },
+      { id: 2, minCost: 5.0, maxCost: 999999, multiplier: 3, grossProfit: 66 },
+    ];
+    const parts = [
+      { unitCost: 0.5, unitRetail: 2.5, qty: 1, totalCost: 0.5, totalRetail: 2.5 },
+      // 3.00 sits in the gap (1.51 → 4.99) → should be flagged
+      { unitCost: 3.0, unitRetail: 12.0, qty: 4, totalCost: 12, totalRetail: 48 },
+      { unitCost: 10, unitRetail: 30, qty: 1, totalCost: 10, totalRetail: 30 },
+    ];
+    const summary = summarizeUnassignedParts(parts, gapped);
+    expect(summary.count).toBe(1);
+    expect(summary.totalQty).toBe(4);
+    expect(summary.totalCost).toBeCloseTo(12, 4);
+    expect(summary.totalRetail).toBeCloseTo(48, 4);
+    expect(summary.minUnitCost).toBeCloseTo(3.0, 4);
+    expect(summary.maxUnitCost).toBeCloseTo(3.0, 4);
+  });
+
+  it('flags parts above the highest tier when no open-ended catch-all exists', () => {
+    const noCatchAll = [
+      { id: 1, minCost: 0, maxCost: 10, multiplier: 5, grossProfit: 80 },
+      { id: 2, minCost: 10.01, maxCost: 100, multiplier: 3, grossProfit: 66 },
+    ];
+    const parts = [
+      { unitCost: 250, unitRetail: 500, qty: 2, totalCost: 500, totalRetail: 1000 },
+      { unitCost: 1500, unitRetail: 3000, qty: 1, totalCost: 1500, totalRetail: 3000 },
+    ];
+    const summary = summarizeUnassignedParts(parts, noCatchAll);
+    expect(summary.count).toBe(2);
+    expect(summary.minUnitCost).toBeCloseTo(250, 4);
+    expect(summary.maxUnitCost).toBeCloseTo(1500, 4);
+    expect(summary.totalCost).toBeCloseTo(2000, 4);
+  });
+
+  it('flags negative unit costs (returns / credits) as unassigned', () => {
+    // Accounting-format negatives parsed by parseCurrency land here as
+    // negative unitCost; no tier covers negatives, so they must be reported
+    // rather than silently dropped.
+    const parts = [
+      { unitCost: -5, unitRetail: -15, qty: 1, totalCost: -5, totalRetail: -15 },
+      { unitCost: 2.0, unitRetail: 9, qty: 1, totalCost: 2, totalRetail: 9 },
+    ];
+    const summary = summarizeUnassignedParts(parts, matrix);
+    expect(summary.count).toBe(1);
+    expect(summary.minUnitCost).toBe(-5);
+    expect(summary.maxUnitCost).toBe(-5);
+    expect(summary.totalCost).toBe(-5);
+  });
+
+  it('handles missing qty / totalCost / totalRetail fields without throwing', () => {
+    const parts = [{ unitCost: -1 }, { unitCost: 1000000 }];
+    const noCatchAll = [{ id: 1, minCost: 0, maxCost: 100, multiplier: 2, grossProfit: 50 }];
+    const summary = summarizeUnassignedParts(parts, noCatchAll);
+    expect(summary.count).toBe(2);
+    expect(summary.totalQty).toBe(0);
+    expect(summary.totalCost).toBe(0);
+    expect(summary.totalRetail).toBe(0);
+  });
+
+  it('returns zero unassigned for an empty parts array', () => {
+    const summary = summarizeUnassignedParts([], matrix);
+    expect(summary.count).toBe(0);
+    expect(summary.minUnitCost).toBeNull();
+    expect(summary.maxUnitCost).toBeNull();
+  });
+
+  it('treats every part as unassigned when the matrix is empty', () => {
+    const parts = [
+      { unitCost: 1, unitRetail: 5, qty: 1, totalCost: 1, totalRetail: 5 },
+      { unitCost: 10, unitRetail: 25, qty: 2, totalCost: 20, totalRetail: 50 },
+    ];
+    const summary = summarizeUnassignedParts(parts, []);
+    expect(summary.count).toBe(2);
+    expect(summary.totalCost).toBeCloseTo(21, 4);
+    expect(summary.totalRetail).toBeCloseTo(55, 4);
+    expect(summary.minUnitCost).toBe(1);
+    expect(summary.maxUnitCost).toBe(10);
+  });
+
+  it('agrees with computeTierAnalysis on which parts survive', () => {
+    // Cross-check invariant: assigned + unassigned == total parts.
+    const gapped = [
+      { id: 1, minCost: 0, maxCost: 1.5, multiplier: 5, grossProfit: 80 },
+      { id: 2, minCost: 5.0, maxCost: 999999, multiplier: 3, grossProfit: 66 },
+    ];
+    const parts = [
+      { unitCost: 0.5, unitRetail: 2.5, qty: 1, totalCost: 0.5, totalRetail: 2.5 },
+      { unitCost: 3.0, unitRetail: 12, qty: 1, totalCost: 3, totalRetail: 12 },
+      { unitCost: 4.99, unitRetail: 15, qty: 1, totalCost: 4.99, totalRetail: 15 },
+      { unitCost: 10, unitRetail: 30, qty: 1, totalCost: 10, totalRetail: 30 },
+    ];
+    const analysis = computeTierAnalysis(parts, gapped);
+    const assigned = analysis.reduce((sum, t) => sum + t.partCount, 0);
+    const { count: unassigned } = summarizeUnassignedParts(parts, gapped);
+    expect(assigned + unassigned).toBe(parts.length);
   });
 });
 

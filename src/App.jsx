@@ -661,11 +661,15 @@ ${recommendations.tiers.map(tier =>
         </div>
 
         {/* Progress Steps - Minimal Design */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2">
+        <nav className="flex items-center gap-2 overflow-x-auto pb-2" aria-label="Pricing workflow progress">
           {['Matrix Setup', 'Upload Data', 'Set Target', 'Results'].map((label, idx) => (
             <div key={idx} className="flex items-center flex-shrink-0">
               <button
                 onClick={() => idx < step && setStep(idx + 1)}
+                type="button"
+                disabled={idx >= step}
+                aria-current={step === idx + 1 ? 'step' : undefined}
+                aria-label={`${label}: ${step === idx + 1 ? 'current step' : step > idx + 1 ? 'completed step, return to this step' : 'locked until previous steps are complete'}`}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                   step === idx + 1
                     ? 'bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/40'
@@ -686,7 +690,7 @@ ${recommendations.tiers.map(tier =>
               )}
             </div>
           ))}
-        </div>
+        </nav>
       </div>
 
       <div className="max-w-6xl mx-auto">
@@ -740,6 +744,7 @@ ${recommendations.tiers.map(tier =>
                           <div className="flex items-center gap-2">
                             <input
                               type="number"
+                              aria-label={`Tier ${tier.id} minimum cost`}
                               value={tier.minCost}
                               onChange={(e) => updateTier(tier.id, 'minCost', e.target.value)}
                               className="w-24 bg-slate-800 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-emerald-500 outline-none"
@@ -748,6 +753,7 @@ ${recommendations.tiers.map(tier =>
                             <span className="text-slate-500">to</span>
                             <input
                               type="number"
+                              aria-label={`Tier ${tier.id} maximum cost`}
                               value={tier.maxCost === 999999 ? '' : tier.maxCost}
                               placeholder="Max"
                               onChange={(e) => updateTier(tier.id, 'maxCost', e.target.value || 999999)}
@@ -761,6 +767,7 @@ ${recommendations.tiers.map(tier =>
                           {/* Bug 19: Use defaultValue + onBlur to prevent decimal typing frustration */}
                           <input
                             type="number"
+                            aria-label={`Tier ${tier.id} multiplier`}
                             key={`mult-${tier.id}-${tier.grossProfit}`}
                             defaultValue={tier.multiplier}
                             onBlur={(e) => updateTier(tier.id, 'multiplier', e.target.value)}
@@ -775,6 +782,7 @@ ${recommendations.tiers.map(tier =>
                             {/* Bug 19: Use defaultValue + onBlur to prevent decimal typing frustration */}
                             <input
                               type="number"
+                              aria-label={`Tier ${tier.id} gross profit percentage`}
                               key={`gp-${tier.id}-${tier.multiplier}`}
                               defaultValue={Math.round(tier.grossProfit * 10) / 10}
                               onBlur={(e) => updateTier(tier.id, 'grossProfit', e.target.value)}
@@ -795,6 +803,7 @@ ${recommendations.tiers.map(tier =>
                           <button
                             onClick={() => removeTier(tier.id)}
                             disabled={matrix.length <= 2}
+                            aria-label={`Remove tier ${tier.id}`}
                             className="p-2 text-slate-500 hover:text-red-400 transition-colors disabled:opacity-30"
                           >
                             ✕
@@ -875,6 +884,7 @@ ${recommendations.tiers.map(tier =>
                     <input
                       type="file"
                       accept=".csv"
+                      aria-label="Upload parts sales CSV file"
                       onChange={handleFileUpload}
                       className="hidden"
                     />
@@ -897,7 +907,7 @@ ${recommendations.tiers.map(tier =>
                 </p>
 
                 {fileName && (
-                  <div className="mt-4 text-center text-emerald-400">
+                  <div className="mt-4 text-center text-emerald-400" role="status" aria-live="polite">
                     <span>{fileName}</span>
                     <span className="text-slate-500 ml-2">({partsData.length} parts loaded)</span>
                   </div>
@@ -905,13 +915,13 @@ ${recommendations.tiers.map(tier =>
 
                 {/* Add this Warning Block */}
                 {skippedCount > 0 && (
-                  <div className="mt-2 text-amber-400 text-sm bg-amber-500/10 px-3 py-2 rounded-lg border border-amber-500/20 text-center">
+                  <div className="mt-2 text-amber-400 text-sm bg-amber-500/10 px-3 py-2 rounded-lg border border-amber-500/20 text-center" role="status" aria-live="polite">
                     <span>Warning: {skippedCount} rows were skipped due to formatting errors.</span>
                   </div>
                 )}
                 
                 {error && (
-                  <div className="mt-4 p-4 bg-red-500/20 text-red-400 rounded-xl">
+                  <div className="mt-4 p-4 bg-red-500/20 text-red-400 rounded-xl" role="alert">
                     {error}
                   </div>
                 )}
@@ -1042,6 +1052,7 @@ ${recommendations.tiers.map(tier =>
                     </span>
                     <input
                       type="number"
+                      aria-label={targetType === 'percent' ? 'Profit increase percentage' : targetType === 'margin' ? 'Target margin percentage' : 'Additional profit dollars'}
                       value={targetIncrease}
                       onChange={(e) => setTargetIncrease(parseFloat(e.target.value) || 0)}
                       className={`w-full bg-slate-800 rounded-xl py-3 text-white text-xl font-bold focus:ring-2 focus:ring-emerald-500 outline-none ${

@@ -398,6 +398,30 @@ describe('Test 5: Edge cases', () => {
 // ─── Test 6: Matrix editing (Bug 16 fix verification) ──────────────────────
 
 describe('Test 6: Matrix editing', () => {
+  it('exposes descriptive controls for keyboard and screen reader users', () => {
+    render(<PriceMatrixOptimizer />);
+
+    expect(screen.getByRole('navigation', { name: /pricing workflow progress/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /matrix setup: current step/i })).toHaveAttribute('aria-current', 'step');
+    expect(screen.getByRole('button', { name: /upload data: locked/i })).toBeDisabled();
+    expect(screen.getByRole('spinbutton', { name: /tier 1 minimum cost/i })).toBeInTheDocument();
+    expect(screen.getByRole('spinbutton', { name: /tier 1 maximum cost/i })).toBeInTheDocument();
+    expect(screen.getByRole('spinbutton', { name: /tier 1 multiplier/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /remove tier 1/i })).toBeInTheDocument();
+  });
+
+  it('announces upload errors with alert semantics', async () => {
+    render(<PriceMatrixOptimizer />);
+    fireEvent.click(screen.getByText('Continue to Upload Data →'));
+
+    const file = createCSVFile('');
+    await userEvent.upload(screen.getByLabelText(/upload parts sales csv file/i), file);
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(/Could not find a valid header|No valid parts/i);
+    });
+  });
+
   it('should allow adding a new tier', () => {
     render(<PriceMatrixOptimizer />);
 

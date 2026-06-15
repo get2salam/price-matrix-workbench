@@ -422,6 +422,24 @@ describe('Test 6: Matrix editing', () => {
     });
   });
 
+  it('provides screen-reader tables for chart data', async () => {
+    render(<PriceMatrixOptimizer />);
+    await uploadCSV(REAL_CSV);
+
+    expect(await screen.findByRole('img', { name: /parts distribution data/i })).toBeInTheDocument();
+    const distributionTable = screen.getByRole('table', { name: /parts distribution data/i });
+    expect(distributionTable).toHaveTextContent('Tier 2: $1.51-$6');
+
+    navigateToTarget();
+    setTarget(10);
+    generateRecommendations();
+
+    expect(await screen.findByRole('img', { name: /multiplier comparison data/i })).toBeInTheDocument();
+    const comparisonTable = screen.getByRole('table', { name: /multiplier comparison data/i });
+    expect(comparisonTable).toHaveTextContent('Current multiplier');
+    expect(comparisonTable).toHaveTextContent('Recommended multiplier');
+  });
+
   it('should allow adding a new tier', () => {
     render(<PriceMatrixOptimizer />);
 

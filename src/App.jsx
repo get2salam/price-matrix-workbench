@@ -1,6 +1,7 @@
 import React, { Suspense, useState, useEffect, useRef } from 'react';
 import { parseCSV } from './utils/csvParser';
 import { computeMatrixSummary, computeTierAnalysis, detectRangeIssues, formatCurrency, formatPercent } from './utils/pricingUtils';
+import { validateUploadFile, sanitizeFileName, escapeCSVCell } from './utils/exportSanitizer';
 
 // Default matrix based on the screenshot provided
 const defaultMatrix = [
@@ -167,7 +168,13 @@ export default function PriceMatrixOptimizer() {
     const file = event.target.files[0];
     if (!file) return;
 
-    setFileName(file.name);
+    const sizeError = validateUploadFile(file);
+    if (sizeError) {
+      setError(sizeError);
+      return;
+    }
+
+    setFileName(sanitizeFileName(file.name));
     setError('');
 
     const reader = new FileReader();
@@ -532,7 +539,9 @@ export default function PriceMatrixOptimizer() {
       tier.newMultiplier.toFixed(2),
       tier.grossProfit.toFixed(1),
       tier.newGrossProfit.toFixed(1),
-      tier.multiplierChange > 0 ? `+${tier.multiplierChange.toFixed(2)}` : tier.multiplierChange.toFixed(2)
+      // escapeCSVCell prevents formula injection: "+2.50" starts with "+" which
+      // Excel/Sheets evaluates as a formula without this guard.
+      escapeCSVCell(tier.multiplierChange > 0 ? `+${tier.multiplierChange.toFixed(2)}` : tier.multiplierChange.toFixed(2)),
     ]);
     
     const csvContent = [

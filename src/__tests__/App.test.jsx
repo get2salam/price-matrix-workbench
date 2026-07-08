@@ -708,4 +708,41 @@ describe('Integration: Full workflow end-to-end', () => {
   });
 });
 
+// ─── Accessibility: Focus management on step transitions ──────────────────
+
+describe('Accessibility: Focus management on step transitions', () => {
+  it('should not steal focus from the page on initial mount', () => {
+    render(<PriceMatrixOptimizer />);
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it('should move focus to the step heading when advancing to Upload Data', () => {
+    render(<PriceMatrixOptimizer />);
+    fireEvent.click(screen.getByText('Continue to Upload Data →'));
+
+    const heading = screen.getByRole('heading', { name: 'Upload Parts Sales Data' });
+    expect(document.activeElement).toBe(heading);
+  });
+
+  it('should move focus to the step heading when going back to Matrix Setup', () => {
+    render(<PriceMatrixOptimizer />);
+    fireEvent.click(screen.getByText('Continue to Upload Data →'));
+    fireEvent.click(screen.getByText('← Back'));
+
+    const heading = screen.getByRole('heading', { name: 'Your Price Matrix' });
+    expect(document.activeElement).toBe(heading);
+  });
+
+  it('should move focus to the results heading after generating recommendations', async () => {
+    render(<PriceMatrixOptimizer />);
+    await uploadCSV(REAL_CSV);
+    navigateToTarget();
+    setTarget(10);
+    generateRecommendations();
+
+    const heading = await screen.findByRole('heading', { name: 'Optimization Results' });
+    expect(document.activeElement).toBe(heading);
+  });
+});
+
 // Trial mode tests removed — app delivered unlocked to client

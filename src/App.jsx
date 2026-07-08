@@ -66,6 +66,12 @@ export default function PriceMatrixOptimizer() {
   // Ref to suppress onBlur during reset (Bug 10 fix)
   const isResettingRef = useRef(false);
 
+  // Ref to the current step's heading, focused on step change so keyboard/
+  // screen-reader users land somewhere meaningful instead of <body> (each
+  // step's content unmounts on navigation, silently dropping focus otherwise)
+  const stepHeadingRef = useRef(null);
+  const hasMountedRef = useRef(false);
+
   // Bug 16: Ref to track partsData without causing re-render loops
   const partsDataRef = useRef([]);
 
@@ -84,6 +90,16 @@ export default function PriceMatrixOptimizer() {
   useEffect(() => {
     partsDataRef.current = partsData;
   }, [partsData]);
+
+  // Move focus to the new step's heading on every step change (but not on
+  // initial mount, so we don't steal focus from the page on first load)
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+    stepHeadingRef.current?.focus();
+  }, [step]);
 
   // Add a new tier to the matrix
   const addTier = () => {
@@ -709,7 +725,13 @@ ${recommendations.tiers.map(tier =>
             <div className="bg-slate-900 rounded-2xl p-6 border border-slate-800">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-white">Your Price Matrix</h2>
+                  <h2
+                    ref={stepHeadingRef}
+                    tabIndex={-1}
+                    className="text-lg font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded"
+                  >
+                    Your Price Matrix
+                  </h2>
                   <p className="text-slate-500 text-xs mt-1">
                     Auto-saved to browser
                   </p>
@@ -882,7 +904,13 @@ ${recommendations.tiers.map(tier =>
           <div className="space-y-6">
             <div className="bg-slate-900 rounded-2xl p-8 border border-slate-800">
               <div className="text-center">
-                <h2 className="text-base font-semibold text-white mb-2">Upload Parts Sales Data</h2>
+                <h2
+                  ref={stepHeadingRef}
+                  tabIndex={-1}
+                  className="text-base font-semibold text-white mb-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded"
+                >
+                  Upload Parts Sales Data
+                </h2>
                 <p className="text-slate-400 text-sm mb-6 max-w-md mx-auto">
                   Upload a CSV file with your parts sales data. Must include a "Unit Cost" column.
                   <span className="block text-slate-500 text-xs mt-1">Supports formatted values like $1,234.56</span>
@@ -1012,7 +1040,13 @@ ${recommendations.tiers.map(tier =>
         {step === 3 && (
           <div className="space-y-6">
             <div className="bg-slate-900 rounded-2xl p-6 border border-slate-800">
-              <h2 className="text-lg font-semibold text-white mb-6">Set Your Margin Target</h2>
+              <h2
+                ref={stepHeadingRef}
+                tabIndex={-1}
+                className="text-lg font-semibold text-white mb-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded"
+              >
+                Set Your Margin Target
+              </h2>
               
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
@@ -1183,6 +1217,13 @@ ${recommendations.tiers.map(tier =>
         {/* Step 4: Results */}
         {step === 4 && recommendations && (
           <div className="space-y-6">
+            <h2
+              ref={stepHeadingRef}
+              tabIndex={-1}
+              className="text-lg font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded"
+            >
+              Optimization Results
+            </h2>
             {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-slate-900 rounded-2xl p-5 border border-slate-800">
